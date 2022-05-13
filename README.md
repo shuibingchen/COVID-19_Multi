@@ -17,16 +17,10 @@ GEO database with accession#
 The following R packages were used
 
 - Seurat
-
 - scran
-
 - scater
-
 - batchelor
-
 - ggplot2
-
 - pheatmap
-
 - RColorBrewer
 
