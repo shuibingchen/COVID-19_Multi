@@ -317,7 +317,10 @@ calOverlapFrac <- function(tref, tgenes){
 }
 
 # draw heatmap showing the fraction of overlapping marker genes between reference and our data
-plotFracOverlap <- function(trefList, tqryList, tinfodir, tfigdir, toutprefix, tsvg=FALSE){
+plotFracOverlap <- function(trefList, tqryList, tinfodir, tfigdir, toutprefix, tsvg=FALSE, 
+                            cluster_rows=F, clustering_method="complete", annrows=NA, anncolors=NA, twidth=7, theight=3){
+  # data frame to store overlapping genes per cluster per reference set
+  overlap.df <- data.frame(ref=character(), our=character(), matched.genes=character())
   # calculate fraction matrix
   fracMat <- matrix(nrow=length(tqryList), ncol=length(trefList))
   colnames(fracMat) <- names(trefList)
@@ -325,71 +328,84 @@ plotFracOverlap <- function(trefList, tqryList, tinfodir, tfigdir, toutprefix, t
   for (i in names(tqryList)){
     for (j in names(trefList)){
       fracMat[i,j] <- calOverlapFrac(trefList[[j]], tqryList[[i]])
+      overlap.genes <- intersect(trefList[[j]], tqryList[[i]])
+      overlap.df <- rbind(overlap.df, data.frame(ref=rep(j, length(overlap.genes)),
+                                                 our=rep(i, length(overlap.genes)),
+                                                 matched.genes=overlap.genes))
     }
   }
   # save fraction matrix
   write.table(fracMat, file.path(tinfodir, paste0(toutprefix, ".txt")), quote=F, sep='\t', col.names=NA)
+  # save overlapping genes
+  write.table(overlap.df, file.path(infodir, paste0(toutprefix, ".overlapping_genes.txt")), quote=F, sep='\t', row.names=F)
   # plot overlapping fraction matrix
+  # raw overlapping value
+  pheatmap(fracMat, color=colorRampPalette(c("#4575B4", "#f7f7f7", "#D73027"))(100), cluster_rows=cluster_rows, cluster_cols=F, 
+           scale='none', show_rownames=T, show_colnames=T, fontsize=10,
+           filename=file.path(tfigdir, paste0(toutprefix, '.raw.png')), width=twidth, height=theight)
   # normalized fraction
-  pheatmap(fracMat, color=colorRampPalette(c("#4575B4", "#f7f7f7", "#D73027"))(100), cluster_rows=F, cluster_cols=F, 
-           scale='row', show_rownames=T, show_colnames=T, fontsize=10,
-           filename=file.path(tfigdir, paste0(toutprefix, '.rescaled.png')), width=7, height=3)
+  # manually scale
+  fracMat.scaled <- t(base::scale(t(fracMat)))
+  fracMat.scaled[is.na(fracMat.scaled)] <- 0
+  pheatmap(fracMat.scaled, color=colorRampPalette(c("#4575B4", "#f7f7f7", "#D73027"))(100), cluster_rows=cluster_rows, cluster_cols=F, 
+           scale='none', show_rownames=T, show_colnames=T, annotation_row=annrows, annotation_colors=anncolors, fontsize=10,
+           clustering_method=clustering_method,
+           filename=file.path(tfigdir, paste0(toutprefix, '.rescaled.png')), width=twidth, height=theight)
   if (tsvg){
-    svg(file.path(tfigdir, paste0(toutprefix, '.rescaled.svg')), width=7, height=3)
-    pheatmap(fracMat, color=colorRampPalette(c("#4575B4", "#f7f7f7", "#D73027"))(100), cluster_rows=F, cluster_cols=F, 
-             scale='row', show_rownames=T, show_colnames=T, fontsize=10)
+    svg(file.path(tfigdir, paste0(toutprefix, '.rescaled.svg')), width=twidth, height=theight)
+    pheatmap(fracMat.scaled, color=colorRampPalette(c("#4575B4", "#f7f7f7", "#D73027"))(100), cluster_rows=cluster_rows, cluster_cols=F, 
+             scale='none', show_rownames=T, show_colnames=T, annotation_row=annrows, annotation_colors=anncolors, fontsize=10, 
+             clustering_method=clustering_method)
     dev.off()
   }
 }
 
-# score each cell based on pre-selected ref marker genes, and plot heatmap/UMAP
-scoreByRefMarkers <- function(tobj, trefList, trefPattern='^Ref_', tinfodir, tfigdir, toutprefix, tsvg=FALSE){
-  # run AddModuleScore to score each reference marker set
-  tenrich.name <- "REF"
-  tp <- AddModuleScore(tobj, features=trefList, pool=NULL, nbin=24, ctrl=min(vapply(X=trefList, FUN=length, FUN.VALUE=numeric(length=1))), k=FALSE, assay=NULL, name=tenrich.name, seed=1)
-  # collect reference set score per cell
-  tref.scores <- FetchData(tp, vars=c('ident', grep(tenrich.name, colnames(tp@meta.data), value=T)))
-  colnames(tref.scores) <- c('ident', names(trefList))
-  # write per-cell reference set scores to file
-  write.table(tref.scores, file=file.path(tinfodir,paste(toutprefix,"txt",sep=".")), quote=F, sep="\t", row.names=T, col.names=NA)
-  
-  # assign each cell a reference cluster if possible
-  assignClust <- function(tx){
-    if (all(tx < 0)){
-      return('Unknown')
-    } else if (length(which(tx == max(tx))) > 1){
-      return('Draw')
-    } else {
-      return(names(tx)[which(tx == max(tx))])
+# remove ambient RNA contaminations in a sample
+my.soupx <- function(workdir, sid, markers=NULL){
+  # Create output folder
+  outdir <- file.path(workdir, sid, 'soupx')
+  if (! file.exists(outdir)){
+    dir.create(outdir)
+  }
+  # Load 10X data and estimate soup profile
+  sc = load10X(file.path(workdir, sid))
+  #print(sc)
+  # Generate tSNE plot by 10X Cellranger pipeline
+  metadata <- sc$metaData
+  num.clusters <- length(unique(metadata$clusters))
+  metadata$clusters <- factor(metadata$clusters, levels=1:num.clusters)
+  # Estimate rho
+  png(filename=file.path(outdir, 'contamination.fraction.png'), width=6.5, height=6.5, units='in', res=300)
+  sc = autoEstCont(sc)
+  dev.off()
+  # Plot ratio of observed to expected counts on reduced dimension map for a set of markers
+  if (! is.null(markers)){
+    for (gene in markers){
+      g <- plotMarkerMap(sc, gene) + ggtitle(gene)
+      g <- g + theme_bw() + theme(plot.title=element_text(hjust=0.5, size=12))
+      ggsave(filename=file.path(outdir, paste('exp','logRatio',gene,'png', sep='.')), plot=g, width=6.5, height=5, dpi=300)
+      print(g)
     }
   }
-  ref.assign <- apply(tref.scores[,grep(trefPattern, colnames(tref.scores), value=T)], MARGIN=1, FUN=assignClust)
-  #table(ref.assign)
-  # normalize the scores per cell
-  tref.scores.norm <- as.data.frame(t(scale(t(tref.scores[,grep(trefPattern, colnames(tref.scores), value=T)]))))
-  colnames(tref.scores.norm) <- paste(tenrich.name, 1:length(trefList),'Norm',sep='_')
-  # add to seurat object
-  tp[['REF.assign']] <- ref.assign
-  tp$REF.assign <- factor(tp$REF.assign, levels=c(names(trefList), 'Unknown'))
-  tp[[colnames(tref.scores.norm)]] <- tref.scores.norm
-  
-  # UMAP showing normalized scores
-  tdata <- FetchData(tp, vars=c('UMAP_1','UMAP_2', paste(tenrich.name, 1:length(trefList),'Norm',sep='_')))
-  
-  for (k in 1:length(trefList)){
-    tclust <- paste(tenrich.name,k,'Norm',sep='_')
-    print(tclust)
-    g <- ggplot(tdata, aes_string(x='UMAP_1', y='UMAP_2', color=tclust))
-    g <- g + geom_point(shape=19, size=1.5, alpha=0.7)
-    g <- g + scale_color_gradient2(low="#4575B4", mid="#f7f7f7", high="#D73027")
-    g <- g + ggtitle(tclust)
-    g <- g + xlab("UMAP 1") + ylab("UMAP 2")
-    g <- g + theme_bw()
-    g <- g + theme(plot.title=element_text(hjust=0.5, size=18, face="bold"))
-    g <- g + theme(axis.text=element_blank(), axis.ticks=element_blank(), axis.title=element_text(size=16,face="bold"))
-    ggsave(file.path(tfigdir, paste('UMAPPlot',toutprefix, tclust,'png',sep='.')), plot=g, width=10, height=8, dpi=300)
-    if (tsvg){
-      ggsave(file.path(tfigdir, paste('UMAPPlot',toutprefix, tclust,'svg',sep='.')), plot=g, width=8, height=6.4)
+  # Remove background contamination from count matrix
+  out = adjustCounts(sc, roundToInt=TRUE)
+  # Write count data in the 10X format
+  mtxdir <- file.path(outdir, 'matrix')
+  write10xCounts(mtxdir, out, type='sparse', version='3')
+  # Plot maps comparing corrected/raw expression
+  if (! is.null(markers)){
+    for (gene in markers){
+      g <- plotChangeMap(sc, out, gene) + ggtitle(paste('Change in expression due to soup correction',gene,sep=' - '))
+      g <- g + theme_bw() + theme(plot.title=element_text(hjust=0.5, size=10))
+      ggsave(filename=file.path(outdir, paste('soup','fraction',gene,'png', sep='.')), plot=g, width=6.5, height=5, dpi=300)
+      print(g)
     }
   }
-} 
+  # background contamination fraction
+  rho <- sc$metaData$rho[1]
+  print(paste('background contamination fraction for',sid,'is',rho))
+  # save R object
+  saveRDS(sc, file.path(outdir, 'sc.rds'))
+  saveRDS(out, file.path(outdir, 'out.rds'))
+  return(vtable)
+}
