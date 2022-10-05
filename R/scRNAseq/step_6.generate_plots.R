@@ -129,8 +129,31 @@ for (gene in markers){
   ggsave(file.path(figdir, paste('extended.fig.6a',gene,'png',sep='.')), plot=plot, width=8, height=6, dpi=300)
 }
 
-# Extended Data Figure 6b: stacked bar plot showing cell compositions in each sample
-g <- myStackBarCellComposition(panc, tcluster_by='ident', tcluster_order=0:4, tgroup_by='Name',
+# Extended Data Figure 6b: stacked bar plot showing cell compositions in each sample. 
+
+# Combine the two ciliated like cell clusters for simplicity.
+# C0            ==>  C0 (Basal cells)
+# C1 + C2       ==>  C1 (Ciliated-like cells)
+# C3            ==>  C2 (Proliferating basal cells)
+# C4            ==>  C3 (Neuronendocrine)
+merge.clust <- c(0,1,1,2,3)
+names(merge.clust) <- 0:4
+simple.clust <- as.vector(merge.clust[as.vector(Idents(panc))])
+names(simple.clust) <- names(Idents(panc))
+simple.clust <- factor(simple.clust, levels=0:3)
+
+# add final clusters to meta data
+panc[["simple.clust"]] <- simple.clust
+
+# set final clusters
+Idents(panc) <- simple.clust
+
+# set color
+my.simple.cluster.color <- c('#fdbf6f','#80b1d3','#cab2d6','#e31a1c')
+names(my.simple.cluster.color) <- 0:3
+
+# plot
+g <- myStackBarCellComposition(panc, tcluster_by='ident', tcluster_order=0:3, tgroup_by='Name',
                                tgroup_order=c('WT_Mock','WT_SARS-CoV-2','CIART_Mock','CIART_SARS-CoV-2'),
-                               tcells=NULL, tanncolor=my.cluster.color, ttlsize=20, ttxsize=18, tltsize=16)
+                               tcells=NULL, tanncolor=my.simple.cluster.color, ttlsize=20, ttxsize=18, tltsize=16)
 ggsave(file.path(figdir, 'extended.fig.6b.png'), plot=g, width=6, height=6.5)
