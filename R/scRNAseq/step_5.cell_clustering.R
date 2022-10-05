@@ -50,8 +50,8 @@ panc[["base.clust"]] <- Idents(panc)
 
 # merge clusters after manual review
 # C1 + C3 + C5 + C6 + C8 + C11 + C12 + C14 + C16            ==>  C0 (Basal cells)
-# C2 + C4 + C10 + C13                                       ==>  C1 (Ciliated cells - 1)
-# C0                                                        ==>  C2 (Ciliated cells - 2)
+# C2 + C4 + C10 + C13                                       ==>  C1 (Ciliated-like cells - 1)
+# C0                                                        ==>  C2 (Ciliated-like cells - 2)
 # C7 + C9                                                   ==>  C3 (Proliferating basal cells)
 # C15                                                       ==>  C4 (Neuronendocrine)
 merge.clust <- c(2,0,1,0,1,0,0,3,0,3,1,0,0,1,0,4,0)
