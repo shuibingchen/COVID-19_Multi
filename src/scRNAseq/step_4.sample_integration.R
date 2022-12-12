@@ -12,10 +12,10 @@ library(batchelor)
 library(scater)
 
 workdir <- "."
-srcdir <- file.path(workdir, "R", "scRNAseq")
+srcdir <- file.path(workdir, "src", "scRNAseq")
 sourcedir <- file.path(workdir, "data")
-figdir <- file.path(workdir, "result", "figure")
-infodir <- file.path(workdir, "result", "info")
+figdir <- file.path(workdir, "result", "scRNAseq", "figure")
+infodir <- file.path(workdir, "result", "scRNAseq", "info")
 
 # set a random seed
 set.seed(98)

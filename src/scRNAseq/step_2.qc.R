@@ -7,11 +7,11 @@ library(magrittr)
 library(future)
 
 workdir <- "."
-srcdir <- file.path(workdir, "R", "scRNAseq")
+srcdir <- file.path(workdir, "src", "scRNAseq")
 sourcedir <- file.path(workdir, "data")
 umidir <- file.path(sourcedir, "UMI_counts")
-figdir <- file.path(workdir, "result", "figure")
-infodir <- file.path(workdir, "result", "info")
+figdir <- file.path(workdir, "result", "scRNAseq", "figure")
+infodir <- file.path(workdir, "result", "scRNAseq", "info")
 
 # project name
 project <- "shuibing"

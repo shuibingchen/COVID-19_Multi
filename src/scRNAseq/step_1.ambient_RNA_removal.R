@@ -8,7 +8,7 @@ library(tidyverse)
 library(Matrix)
 
 workdir <- "."
-srcdir <- file.path(workdir, "R", "scRNAseq")
+srcdir <- file.path(workdir, "src", "scRNAseq")
 umidir <- file.path(workdir, "data", "UMI_counts")
 
 # load functions
