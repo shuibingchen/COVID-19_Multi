@@ -55,6 +55,7 @@ g <- g + theme_bw()
 g <- g + theme(axis.title.x = element_blank(), axis.title.y = element_text(size=15, face="bold", color='black'))
 g <- g + theme(axis.text.x = element_text(size=14, face="bold", angle=60, hjust=1, color='black'), axis.text.y = element_text(size=14, face="bold", color='black'))
 g <- g + theme(legend.position = "None")
+g <- g + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 ggsave(file.path(figdir, 'fig.2l.png'), plot=g, width=6, height=5.5, dpi=300)
 
 # Figure 2m: UMAP illustrating the five cell clusters
@@ -108,7 +109,8 @@ g <- g + theme_bw()
 g <- g + theme(axis.text.x=element_text(color='black'), axis.text.y=element_text(color='black'))
 g <- g + theme(axis.title.x=element_text(color='black'), axis.title.y=element_blank())
 g <- g + theme(legend.position="none")
-ggsave(file.path(figdir, 'fig.2p.png'), plot=g, width=3, height=6.5, dpi=300)
+g <- g + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+ggsave(file.path(figdir, 'fig.2o.png'), plot=g, width=3, height=6.5, dpi=300)
 
 # Figure 2p: dot plot showing the expression of all SARS-CoV-2 viral genes in WT and CIART-/- infected samples in the "Ciliated-like cells 1" cluster
 g <- DotPlot(subset(panc, subset=final.clust %in% c(1) & orig.ident %in% c('XM2','XM4')), assay='RNA',
@@ -118,6 +120,7 @@ g <- g + coord_flip()
 g <- g + theme_bw()
 g <- g + theme(axis.text.x=element_text(angle=60, hjust=1, color='black'), axis.text.y=element_text(color='black'))
 g <- g + theme(axis.title=element_blank())
+g <- g + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 ggsave(file.path(figdir, "fig.2p.png"), plot=g, width=4, height=6, dpi=300)
 
 # Extended Data Figure 6a: UMAP plot showing the expression of selected marker genes
