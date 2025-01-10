@@ -2,7 +2,7 @@
 
 This repository contains the codes necessary to perform the analysis in our
 manuscript ["A Multi-Organoid Platform Identifies CIART as a Key Factor for
-SARS-CoV-2 Infection"](https://github.com/shuibingchen/COVID-19_Multi), as
+SARS-CoV-2 Infection"](https://www.nature.com/articles/s41556-023-01095-y), as
 described in the methods and main text.
 
 ### Input data
